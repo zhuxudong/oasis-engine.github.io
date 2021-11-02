@@ -3,6 +3,8 @@
  * @category Advance
  */
 import { OrbitControl } from "@oasis-engine/controls";
+import "@oasis-engine/stats";
+import * as dat from "dat.gui";
 import {
   AssetType,
   Camera,
@@ -19,13 +21,12 @@ import {
   Script,
   Shader,
   Texture2D,
+  TextureFilterMode,
   Vector2,
   Vector4,
   WebGLEngine
 } from "oasis-engine";
-import "@oasis-engine/stats";
 Logger.enable();
-import * as dat from "dat.gui";
 const gui = new dat.GUI();
 
 // Create engine object
@@ -435,7 +436,7 @@ void main()
     mpHMaterial.shaderData.setFloat("texelWidthOffset", 1 / 1024);
     varianceMaterial.shaderData.setVector2("texelSizeOffset", new Vector2(1 / 1024, 1 / 1024));
     combineMaterial.shaderData.setVector2("texelSizeOffset", new Vector2(1 / 1024, 1 / 1024));
-    combineMaterial.shaderData.setVector4("beautyLevel0", new Vector4(0.7, 0, 0.4, 0));
+    combineMaterial.shaderData.setVector4("beautyLevel0", new Vector4(0.7, 0.4, 0.4, 0.15));
 
     engine.resourceManager
       .load([
@@ -453,6 +454,15 @@ void main()
         }
       ])
       .then((res: Texture2D[]) => {
+        // @ts-ignore
+        // hack: make texture no mipmap
+        res[1]._mipmap = false;
+        res[1].filterMode = TextureFilterMode.Point;
+        res[1].filterMode = TextureFilterMode.Bilinear;
+        // @ts-ignore
+        res[2]._mipmap = false;
+        res[2].filterMode = TextureFilterMode.Point;
+        res[2].filterMode = TextureFilterMode.Bilinear;
         bgMaterial.shaderData.setTexture("inputImageTexture", res[0]);
         combineMaterial.shaderData.setTexture("whiteLutTex", res[1]);
         combineMaterial.shaderData.setTexture("contrastLutTex", res[2]);
@@ -508,6 +518,9 @@ void main()
 
 const script = cameraEntity.addComponent(FaceBeautyScript);
 
-gui.add({ test: true }, "test").onChange((v) => {
-  script.enabled = v;
-}).name("美颜");
+gui
+  .add({ test: true }, "test")
+  .onChange((v) => {
+    script.enabled = v;
+  })
+  .name("美颜");
