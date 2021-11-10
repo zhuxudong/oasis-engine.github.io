@@ -61,16 +61,6 @@ class FaceBeautyScript extends Script {
 
   constructor(entity: Entity) {
     super(entity);
-    // const width = engine.canvas.width;
-    // const height = engine.canvas.height;
-
-    // this.rts[0] = new RenderTarget(
-    //   engine,
-    //   this.width,
-    //   this.height,
-    //   new RenderColorTexture(engine, this.width, this.height),
-    //   RenderBufferDepthFormat.Depth
-    // );
 
     for (let i = 0; i < 3; i++) {
       this.rts[i] = new RenderTarget(
