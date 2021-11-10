@@ -54,18 +54,29 @@ class FaceBeautyScript extends Script {
   combineMaterial: Material;
   bgRenderer: MeshRenderer;
 
+  width: number = 720;
+  height: number = 1280;
+  originTexture: Texture2D;
+
   constructor(entity: Entity) {
     super(entity);
     // const width = engine.canvas.width;
     // const height = engine.canvas.height;
-    const width = 1024;
-    const height = 1024;
-    for (let i = 0; i < 4; i++) {
+
+    // this.rts[0] = new RenderTarget(
+    //   engine,
+    //   this.width,
+    //   this.height,
+    //   new RenderColorTexture(engine, this.width, this.height),
+    //   RenderBufferDepthFormat.Depth
+    // );
+
+    for (let i = 0; i < 3; i++) {
       this.rts[i] = new RenderTarget(
         engine,
-        width,
-        height,
-        new RenderColorTexture(engine, width, height),
+        this.width,
+        this.height,
+        new RenderColorTexture(engine, this.width, this.height),
         RenderBufferDepthFormat.Depth
       );
     }
@@ -432,17 +443,19 @@ void main()
     varianceMaterial.renderQueueType = RenderQueueType.AlphaTest + 1;
     combineMaterial.renderQueueType = RenderQueueType.AlphaTest + 1;
 
-    mpVMaterial.shaderData.setFloat("texelHeightOffset", 1 / 1024);
-    mpHMaterial.shaderData.setFloat("texelWidthOffset", 1 / 1024);
-    varianceMaterial.shaderData.setVector2("texelSizeOffset", new Vector2(1 / 1024, 1 / 1024));
-    combineMaterial.shaderData.setVector2("texelSizeOffset", new Vector2(1 / 1024, 1 / 1024));
+    mpVMaterial.shaderData.setFloat("texelWidthOffset", 0);
+    mpVMaterial.shaderData.setFloat("texelHeightOffset", 1 / this.height);
+    mpHMaterial.shaderData.setFloat("texelWidthOffset", 1 / this.width);
+    mpHMaterial.shaderData.setFloat("texelHeightOffset", 0);
+    varianceMaterial.shaderData.setVector2("texelSizeOffset", new Vector2(1 / this.width, 1 / this.height));
+    combineMaterial.shaderData.setVector2("texelSizeOffset", new Vector2(1 / this.width, 1 / this.height));
     combineMaterial.shaderData.setVector4("beautyLevel0", new Vector4(0.7, 0.4, 0.4, 0.15));
 
     engine.resourceManager
       .load([
         {
           type: AssetType.Texture2D,
-          url: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*I24-S60WwPIAAAAAAAAAAAAAARQnAQ"
+          url: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*nUVnRLmYT80AAAAAAAAAAAAAARQnAQ"
         },
         {
           type: AssetType.Texture2D,
@@ -463,7 +476,8 @@ void main()
         res[2]._mipmap = false;
         res[2].filterMode = TextureFilterMode.Point;
         res[2].filterMode = TextureFilterMode.Bilinear;
-        bgMaterial.shaderData.setTexture("inputImageTexture", res[0]);
+        this.originTexture = res[0];
+        // bgMaterial.shaderData.setTexture("inputImageTexture", res[0]);
         combineMaterial.shaderData.setTexture("whiteLutTex", res[1]);
         combineMaterial.shaderData.setTexture("contrastLutTex", res[2]);
       });
@@ -477,37 +491,37 @@ void main()
   }
 
   onBeginRender(camera: Camera): void {
-    if (!this.enabled) {
-      this.bgRenderer.setMaterial(this.bgMaterial);
-      camera.renderTarget = null;
-      return;
-    }
-    this.bgRenderer.setMaterial(this.bgMaterial);
-    camera.renderTarget = this.rts[0];
-    camera.render();
-    const originOutput = this.rts[0].getColorTexture();
+    // if (!this.enabled) {
+    //   this.bgRenderer.setMaterial(this.bgMaterial);
+    //   camera.renderTarget = null;
+    //   return;
+    // }
+    // this.bgRenderer.setMaterial(this.bgMaterial);
+    // camera.renderTarget = this.rts[0];
+    // camera.render();
+    // const originOutput = this.rts[0].getColorTexture();
 
     // bilateral V
-    this.mpVMaterial.shaderData.setTexture("inputImageTexture", originOutput);
+    this.mpVMaterial.shaderData.setTexture("inputImageTexture", this.originTexture);
     this.bgRenderer.setMaterial(this.mpVMaterial);
-    camera.renderTarget = this.rts[1];
+    camera.renderTarget = this.rts[0];
     camera.render();
 
     // bilateral H
-    this.mpHMaterial.shaderData.setTexture("inputImageTexture", this.rts[1].getColorTexture());
+    this.mpHMaterial.shaderData.setTexture("inputImageTexture", this.rts[0].getColorTexture());
     this.bgRenderer.setMaterial(this.mpHMaterial);
-    camera.renderTarget = this.rts[2];
+    camera.renderTarget = this.rts[1];
     camera.render();
-    const bilateralOutput = this.rts[2].getColorTexture();
+    const bilateralOutput = this.rts[1].getColorTexture();
 
     // variance
-    this.varianceMaterial.shaderData.setTexture("inputImageTexture", originOutput);
+    this.varianceMaterial.shaderData.setTexture("inputImageTexture", this.originTexture);
     this.bgRenderer.setMaterial(this.varianceMaterial);
-    camera.renderTarget = this.rts[3];
+    camera.renderTarget = this.rts[2];
     camera.render();
-    const varianceOutput = this.rts[3].getColorTexture();
+    const varianceOutput = this.rts[2].getColorTexture();
 
-    this.combineMaterial.shaderData.setTexture("inputImageTexture", originOutput);
+    this.combineMaterial.shaderData.setTexture("inputImageTexture", this.originTexture);
     this.combineMaterial.shaderData.setTexture("mp_tex", bilateralOutput);
     this.combineMaterial.shaderData.setTexture("a_tex", varianceOutput);
     this.bgRenderer.setMaterial(this.combineMaterial);
