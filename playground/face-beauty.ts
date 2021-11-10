@@ -44,7 +44,7 @@ cameraEntity.addComponent(OrbitControl);
 engine.run();
 
 // 美颜
-
+alert("ss");
 class FaceBeautyScript extends Script {
   rts: RenderTarget[] = [];
   bgMaterial: Material;
@@ -58,6 +58,7 @@ class FaceBeautyScript extends Script {
   height: number = 1280;
   originTexture: Texture2D;
 
+  
   constructor(entity: Entity) {
     super(entity);
     // const width = engine.canvas.width;
@@ -74,9 +75,9 @@ class FaceBeautyScript extends Script {
     for (let i = 0; i < 3; i++) {
       this.rts[i] = new RenderTarget(
         engine,
-        this.width,
-        this.height,
-        new RenderColorTexture(engine, this.width, this.height),
+        this.width/2,
+        this.height/2,
+        new RenderColorTexture(engine, this.width/2, this.height/2),
         RenderBufferDepthFormat.Depth
       );
     }
