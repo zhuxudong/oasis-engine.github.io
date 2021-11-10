@@ -29,9 +29,13 @@ import {
 Logger.enable();
 const gui = new dat.GUI();
 
+const width: number = 720;
+const height: number = 1280;
+
 // Create engine object
 const engine = new WebGLEngine("canvas");
-engine.canvas.resizeByClientSize();
+engine.canvas.width = width;
+engine.canvas.height = height;
 
 const scene = engine.sceneManager.activeScene;
 const rootEntity = scene.createRootEntity();
@@ -44,7 +48,6 @@ cameraEntity.addComponent(OrbitControl);
 engine.run();
 
 // 美颜
-alert("ss");
 class FaceBeautyScript extends Script {
   rts: RenderTarget[] = [];
   bgMaterial: Material;
@@ -54,11 +57,8 @@ class FaceBeautyScript extends Script {
   combineMaterial: Material;
   bgRenderer: MeshRenderer;
 
-  width: number = 720;
-  height: number = 1280;
   originTexture: Texture2D;
 
-  
   constructor(entity: Entity) {
     super(entity);
     // const width = engine.canvas.width;
@@ -75,9 +75,9 @@ class FaceBeautyScript extends Script {
     for (let i = 0; i < 3; i++) {
       this.rts[i] = new RenderTarget(
         engine,
-        this.width/2,
-        this.height/2,
-        new RenderColorTexture(engine, this.width/2, this.height/2),
+        width / 2,
+        height / 2,
+        new RenderColorTexture(engine, width / 2, height / 2),
         RenderBufferDepthFormat.Depth
       );
     }
@@ -445,11 +445,11 @@ void main()
     combineMaterial.renderQueueType = RenderQueueType.AlphaTest + 1;
 
     mpVMaterial.shaderData.setFloat("texelWidthOffset", 0);
-    mpVMaterial.shaderData.setFloat("texelHeightOffset", 1 / this.height);
-    mpHMaterial.shaderData.setFloat("texelWidthOffset", 1 / this.width);
+    mpVMaterial.shaderData.setFloat("texelHeightOffset", 1 / height);
+    mpHMaterial.shaderData.setFloat("texelWidthOffset", 1 / width);
     mpHMaterial.shaderData.setFloat("texelHeightOffset", 0);
-    varianceMaterial.shaderData.setVector2("texelSizeOffset", new Vector2(1 / this.width, 1 / this.height));
-    combineMaterial.shaderData.setVector2("texelSizeOffset", new Vector2(1 / this.width, 1 / this.height));
+    varianceMaterial.shaderData.setVector2("texelSizeOffset", new Vector2(1 / width, 1 / height));
+    combineMaterial.shaderData.setVector2("texelSizeOffset", new Vector2(1 / width, 1 / height));
     combineMaterial.shaderData.setVector4("beautyLevel0", new Vector4(0.7, 0.4, 0.4, 0.15));
 
     engine.resourceManager
