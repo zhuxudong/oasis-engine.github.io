@@ -16,8 +16,12 @@ import {
   MeshRenderer,
   PBRMaterial,
   PrimitiveMesh,
+  Script,
   SkyBoxMaterial,
+  Sprite,
+  SpriteRenderer,
   Texture2D,
+  Vector3,
   WebGLEngine
 } from "oasis-engine";
 
@@ -54,51 +58,40 @@ background.mode = BackgroundMode.Sky;
 sky.material = skyMaterial;
 sky.mesh = PrimitiveMesh.createCuboid(engine, 1, 1, 1);
 
-engine.run();
-engine.resourceManager
-  .load<Entity>({
-    urls: [
-      "https://gw.alipayobjects.com/os/OasisHub/cf33a95d-30fe-40b4-bb6d-8d36650911ac/lottie.json",
-      "https://gw.alipayobjects.com/os/OasisHub/90320db5-82ab-47a9-8bf7-5b86860d9349/lottie.atlas"
-    ],
-    type: "lottie"
-  })
-  .then((lottieEntity) => {
-    rootEntity.addChild(lottieEntity);
-    const lottie = lottieEntity.getComponent(LottieAnimation);
-    // lottie.isLooping = true;
-    lottie.play();
+async function load3D() {
+  const gltf = await engine.resourceManager
+    // .load<GLTFResource>("https://gw.alipayobjects.com/os/OasisHub/440000381/9123/fu_05.gltf")
+    .load<GLTFResource>("https://gw.alipayobjects.com/os/bmw-prod/ea889d82-6ed4-4eac-bf09-96cc1d9cb093.glb");
+
+  const { defaultSceneRoot, materials } = gltf;
+  // const material = materials[0] as PBRMaterial;
+  const entity = rootEntity.createChild();
+  entity.transform.setScale(0, 0, 0);
+
+  entity.addChild(defaultSceneRoot);
+  // entity.transform.setRotation(90, 0, 0);
+
+  const material = new PBRMaterial(engine);
+  defaultSceneRoot.findByName("福字").getComponent(MeshRenderer).setMaterial(material);
+
+  material.baseColor.setValue(1, 1, 1, 1);
+  material.metallic = 1;
+  material.roughness = 0;
+
+  material.tilingOffset.setValue(10, 10, 0, 0);
+
+  gui.add(material, "metallic", 0, 1, 0.01);
+  gui.add(material, "roughness", 0, 1, 0.01);
+  gui.addColor({ baseColor: [255, 255, 255] }, "baseColor").onChange((v) => {
+    material.baseColor.setValue(v[0] / 255, v[1] / 255, v[2] / 255, 1);
   });
 
-engine.resourceManager
-  // .load<GLTFResource>("https://gw.alipayobjects.com/os/OasisHub/440000381/9123/fu_05.gltf")
-  .load<GLTFResource>("https://gw.alipayobjects.com/os/bmw-prod/ea889d82-6ed4-4eac-bf09-96cc1d9cb093.glb")
-  .then((gltf) => {
-    const { defaultSceneRoot, materials } = gltf;
-    // const material = materials[0] as PBRMaterial;
-    const entity = rootEntity.createChild();
-
-    entity.addChild(defaultSceneRoot);
-    // entity.transform.setRotation(90, 0, 0);
-
-    const material = new PBRMaterial(engine);
-    defaultSceneRoot.findByName("福字").getComponent(MeshRenderer).setMaterial(material);
-
-    material.baseColor.setValue(1, 1, 1, 1);
-    material.metallic = 1;
-    material.roughness = 0;
-
-    material.tilingOffset.setValue(10, 10, 0, 0);
-
-    gui.add(material, "metallic", 0, 1, 0.01);
-    gui.add(material, "roughness", 0, 1, 0.01);
-    gui.addColor({ baseColor: [255, 255, 255] }, "baseColor").onChange((v) => {
-      material.baseColor.setValue(v[0] / 255, v[1] / 255, v[2] / 255, 1);
-    });
-
-    effectHDR();
-    effectNormal(material);
-  });
+  const normalTexture = await engine.resourceManager.load<Texture2D>(
+    "https://gw.alipayobjects.com/zos/OasisHub/a4d5aebe-043f-43e7-b3d7-b5d7f6376c32/26000030/0.6681844223860367.jpg"
+  );
+  material.normalTexture = normalTexture;
+  return entity;
+}
 
 // hdr
 async function effectHDR() {
@@ -142,10 +135,67 @@ async function effectHDR() {
     });
 }
 
-// 磨砂
-async function effectNormal(material) {
-  const normalTexture = await engine.resourceManager.load<Texture2D>(
-    "https://gw.alipayobjects.com/zos/OasisHub/a4d5aebe-043f-43e7-b3d7-b5d7f6376c32/26000030/0.6681844223860367.jpg"
-  );
-  material.normalTexture = normalTexture;
+// 2D mock
+async function load2D() {
+  const texture = await engine.resourceManager.load<Texture2D>({
+    url: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*ApFPTZSqcMkAAAAAAAAAAAAAARQnAQ",
+    type: AssetType.Texture2D
+  });
+  const spriteEntity = rootEntity.createChild();
+  spriteEntity.transform.position = new Vector3(0, 0.5, -0.1);
+  const spriteRenderer = spriteEntity.addComponent(SpriteRenderer);
+  const sprite = new Sprite(engine, texture);
+  spriteRenderer.sprite = sprite;
+  spriteEntity.transform.setScale(0.1, 0.1, 1);
+  return spriteEntity;
+}
+
+// 光晕特效
+async function effectLottie() {
+  const lottieEntity = await engine.resourceManager.load<Entity>({
+    urls: [
+      "https://gw.alipayobjects.com/os/OasisHub/cf33a95d-30fe-40b4-bb6d-8d36650911ac/lottie.json",
+      "https://gw.alipayobjects.com/os/OasisHub/90320db5-82ab-47a9-8bf7-5b86860d9349/lottie.atlas"
+    ],
+    type: "lottie"
+  });
+  rootEntity.addChild(lottieEntity);
+  const lottie = lottieEntity.getComponent(LottieAnimation);
+  // lottie.isLooping = true;
+  lottie.play();
+}
+
+async function init() {
+  await effectHDR();
+  const entity2D = await load2D();
+
+  setTimeout(async () => {
+    const entity3D = await load3D();
+
+    entity2D.addComponent(Hide);
+    entity3D.addComponent(Show);
+    effectLottie();
+  }, 1000);
+
+  engine.run();
+}
+
+init();
+
+class Hide extends Script {
+  onUpdate() {
+    const scale = this.entity.transform.scale.x;
+    const newScale = Math.max(0, scale - 0.01);
+
+    this.entity.transform.setScale(newScale, newScale, newScale);
+  }
+}
+
+class Show extends Script {
+  onUpdate() {
+    const scale = this.entity.transform.scale.x;
+    const newScale = Math.min(1, scale + 0.01);
+
+    this.entity.transform.setScale(newScale, newScale, newScale);
+  }
 }
