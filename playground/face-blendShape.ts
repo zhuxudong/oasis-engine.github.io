@@ -35,11 +35,11 @@ lightNode.transform.lookAt(new Vector3(0, 0, 1));
 lightNode.transform.rotate(new Vector3(-45, -135, 0));
 
 engine.resourceManager
-  .load<GLTFResource>("https://gw.alipayobjects.com/os/OasisHub/440000381/7322/yuanlian.gltf")
+  .load<GLTFResource>("https://gw.alipayobjects.com/os/OasisHub/440000381/750/face.gltf")
   .then((asset) => {
     const { defaultSceneRoot } = asset;
     rootEntity.addChild(defaultSceneRoot);
-    const skinMeshRenderer = defaultSceneRoot.findByName("18_35").getComponent(SkinnedMeshRenderer);
+    const skinMeshRenderer = defaultSceneRoot.findByName("face_18_35").getComponent(SkinnedMeshRenderer);
 
     const guiData = {
       b1: 0,
