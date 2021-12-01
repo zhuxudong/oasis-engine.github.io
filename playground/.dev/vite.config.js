@@ -14,7 +14,7 @@ fs.emptyDirSync(path.resolve(__dirname, OUT_PATH));
 // create mpa
 const demoList = fs
   .readdirSync(path.join(__dirname, "../"))
-  .filter((name) => name !== ".dev")
+  .filter((name) => name === "wufu-effect.ts")
   .map((name) => {
     const content = fs.readFileSync(path.join(__dirname, "../", name), "utf8");
     const title = /@title\s+(.+)\b/.exec(content)[1];

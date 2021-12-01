@@ -3,27 +3,26 @@
  * @category Material
  */
 import { OrbitControl } from "@oasis-engine/controls";
-import { LottieAnimation } from "@oasis-engine/lottie";
+import { extrudePolygon } from "geometry-extrude";
 import * as dat from "dat.gui";
 import {
   AmbientLight,
   AssetType,
   BackgroundMode,
   Camera,
-  Entity,
   GLTFResource,
   Logger,
   MeshRenderer,
   PBRMaterial,
   PrimitiveMesh,
-  Script,
   SkyBoxMaterial,
-  Sprite,
-  SpriteRenderer,
   Texture2D,
-  Vector3,
   WebGLEngine
 } from "oasis-engine";
+import { image2path } from "./image2path";
+import { CharManager } from "./CharManager";
+import { load } from "cheerio";
+import { resolveOnChange } from "antd/lib/input/Input";
 
 const gui = new dat.GUI();
 
@@ -36,17 +35,12 @@ const scene = engine.sceneManager.activeScene;
 const { background } = scene;
 const rootEntity = scene.createRootEntity();
 
-// const directLightNode = rootEntity.createChild("dir_light");
-// const directLightNode2 = rootEntity.createChild("dir_light2");
-// directLightNode.addComponent(DirectLight);
-// directLightNode2.addComponent(DirectLight);
-// directLightNode.transform.setRotation(30, 0, 0);
-// directLightNode2.transform.setRotation(-30, 180, 0);
-
 //Create camera
 const cameraNode = rootEntity.createChild("camera_node");
-cameraNode.transform.setPosition(0, 0.3, 2);
-cameraNode.addComponent(Camera);
+cameraNode.transform.setPosition(0, 0.3, 20);
+const camera = cameraNode.addComponent(Camera);
+camera.enableFrustumCulling = false;
+camera.farClipPlane = 1000000;
 const orbitControl = cameraNode.addComponent(OrbitControl);
 orbitControl.target.setValue(0, 0.3, 0);
 
@@ -66,7 +60,6 @@ async function load3D() {
   const { defaultSceneRoot, materials } = gltf;
   // const material = materials[0] as PBRMaterial;
   const entity = rootEntity.createChild();
-  entity.transform.setScale(0, 0, 0);
 
   entity.addChild(defaultSceneRoot);
   // entity.transform.setRotation(90, 0, 0);
@@ -90,11 +83,27 @@ async function load3D() {
     "https://gw.alipayobjects.com/zos/OasisHub/a4d5aebe-043f-43e7-b3d7-b5d7f6376c32/26000030/0.6681844223860367.jpg"
   );
   material.normalTexture = normalTexture;
+
+  gui
+    .add(
+      {
+        normalTexture: true
+      },
+      "normalTexture"
+    )
+    .onChange((v) => {
+      if (v) {
+        material.normalTexture = normalTexture;
+      } else {
+        material.normalTexture = null;
+      }
+    })
+    .name("法线贴图");
   return entity;
 }
 
 // hdr
-async function effectHDR() {
+async function effectHDR(folder) {
   const envList = {
     sunset: "https://gw.alipayobjects.com/os/bmw-prod/34986a5b-fa16-40f1-83c8-1885efe855d2.bin",
     // pisa: "https://gw.alipayobjects.com/os/bmw-prod/258a783d-0673-4b47-907a-da17b882feee.bin",
@@ -117,85 +126,165 @@ async function effectHDR() {
     ambientLightList[name] = env;
   });
 
-  scene.ambientLight = ambientLightList.sky;
-  skyMaterial.textureCubeMap = ambientLightList.sky.specularTexture;
-  skyMaterial.textureDecodeRGBM = true;
+  scene.ambientLight = ambientLightList.sunset;
+  // skyMaterial.textureCubeMap = ambientLightList.sky.specularTexture;
+  // skyMaterial.textureDecodeRGBM = true;
 
-  gui
+  folder
     .add(
       {
-        env: "sky"
+        env: "sunset"
       },
       "env",
       names
     )
     .onChange((v) => {
       scene.ambientLight = ambientLightList[v];
-      skyMaterial.textureCubeMap = ambientLightList[v].specularTexture;
+      // skyMaterial.textureCubeMap = ambientLightList[v].specularTexture;
     });
 }
 
-// 2D mock
-async function load2D() {
-  const texture = await engine.resourceManager.load<Texture2D>({
-    url: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*ApFPTZSqcMkAAAAAAAAAAAAAARQnAQ",
-    type: AssetType.Texture2D
+async function debugMaterial(material: PBRMaterial) {
+  material.baseColor.setValue(1, 1, 1, 1);
+  material.metallic = 1;
+  material.roughness = 0;
+
+  material.tilingOffset.setValue(10, 10, 0, 0);
+
+  const folder = gui.addFolder("调试材质");
+  folder.add(material, "metallic", 0, 1, 0.01);
+  folder.add(material, "roughness", 0, 1, 0.01);
+  folder.addColor({ baseColor: [255, 255, 255] }, "baseColor").onChange((v) => {
+    material.baseColor.setValue(v[0] / 255, v[1] / 255, v[2] / 255, 1);
   });
-  const spriteEntity = rootEntity.createChild();
-  spriteEntity.transform.position = new Vector3(0, 0.5, -0.1);
-  const spriteRenderer = spriteEntity.addComponent(SpriteRenderer);
-  const sprite = new Sprite(engine, texture);
-  spriteRenderer.sprite = sprite;
-  spriteEntity.transform.setScale(0.1, 0.1, 1);
-  return spriteEntity;
+
+  const normalTexture = await engine.resourceManager.load<Texture2D>(
+    "https://gw.alipayobjects.com/zos/OasisHub/a4d5aebe-043f-43e7-b3d7-b5d7f6376c32/26000030/0.6681844223860367.jpg"
+  );
+  material.normalTexture = normalTexture;
+
+  folder
+    .add(
+      {
+        normalTexture: true
+      },
+      "normalTexture"
+    )
+    .onChange((v) => {
+      if (v) {
+        material.normalTexture = normalTexture;
+      } else {
+        material.normalTexture = null;
+      }
+    })
+    .name("法线贴图");
+
+  return folder;
 }
 
-// 光晕特效
-async function effectLottie() {
-  const lottieEntity = await engine.resourceManager.load<Entity>({
-    urls: [
-      "https://gw.alipayobjects.com/os/OasisHub/cf33a95d-30fe-40b4-bb6d-8d36650911ac/lottie.json",
-      "https://gw.alipayobjects.com/os/OasisHub/90320db5-82ab-47a9-8bf7-5b86860d9349/lottie.atlas"
-    ],
-    type: "lottie"
-  });
-  rootEntity.addChild(lottieEntity);
-  const lottie = lottieEntity.getComponent(LottieAnimation);
-  // lottie.isLooping = true;
-  lottie.play();
+async function loadImages() {
+  const imageUrls = {
+    1: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*0__bQqWbofcAAAAAAAAAAAAAARQnAQ",
+    2: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*P5fxTotZoW8AAAAAAAAAAAAAARQnAQ",
+    3: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*E3pkSY0kgLsAAAAAAAAAAAAAARQnAQ",
+    4: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*iOayQrPWEWcAAAAAAAAAAAAAARQnAQ",
+    5: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*KXkGT5mgjk4AAAAAAAAAAAAAARQnAQ"
+  };
+
+  return Promise.all(
+    [1, 2, 3, 4, 5].map((index) => {
+      return new Promise((resolve) => {
+        const image = new Image();
+        image.src = imageUrls[index];
+        image.crossOrigin = "anonymous";
+        image.onload = () => {
+          resolve(image);
+        };
+      });
+    })
+  );
 }
 
-async function init() {
-  await effectHDR();
-  const entity2D = await load2D();
+async function convert(canvas, image) {
+  const context = canvas.getContext("2d");
 
-  setTimeout(async () => {
-    const entity3D = await load3D();
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0);
+  const data = await image2path(canvas, 0.01, "black");
 
-    entity2D.addComponent(Hide);
-    entity3D.addComponent(Show);
-    effectLottie();
-  }, 1000);
-
-  engine.run();
+  const result = extrudePolygon(data, config);
+  // 更新 mesh
+  charManager.updateMesh(result);
+  charManager._charEntity.isActive = true;
 }
 
+const config = {
+  depth: 1,
+  bevelSize: 0.1,
+  bevelSegments: 1,
+  smoothSide: false,
+  smoothBevel: false
+};
+
+const charManager = new CharManager(engine, rootEntity);
+charManager._charEntity.isActive = false;
+// charManager._charEntity.transform.setScale(0.01, 0.01, 0.01);
+charManager._charEntity.transform.setPosition(-4, 4, 0);
+
+// Run
+engine.run();
 init();
 
-class Hide extends Script {
-  onUpdate() {
-    const scale = this.entity.transform.scale.x;
-    const newScale = Math.max(0, scale - 0.01);
+async function init() {
+  const images = await loadImages();
+  let currentImage = images[0];
+  // load3D();
 
-    this.entity.transform.setScale(newScale, newScale, newScale);
-  }
-}
+  const canvas = document.createElement("canvas");
+  const { width, height } = engine.canvas;
+  canvas.width = width;
+  canvas.height = height;
+  canvas.setAttribute("style", "position:absolute;top:0;left:0;background:transparent;pointer-events:none");
+  document.body.appendChild(canvas);
 
-class Show extends Script {
-  onUpdate() {
-    const scale = this.entity.transform.scale.x;
-    const newScale = Math.min(1, scale + 0.01);
+  convert(canvas, currentImage);
 
-    this.entity.transform.setScale(newScale, newScale, newScale);
-  }
+  // debug
+  gui
+    .add({ image: "1" }, "image", [1, 2, 3, 4, 5])
+    .onChange(async (index) => {
+      currentImage = images[index - 1];
+      convert(canvas, currentImage);
+    })
+    .name("五福字体");
+
+  gui
+    .add({ show: true }, "show")
+    .onChange((v) => {
+      if (v) {
+        document.body.appendChild(canvas);
+      } else {
+        document.body.removeChild(canvas);
+      }
+    })
+    .name("显示2D字体");
+
+  gui.add(config, "depth", 0, 1, 0.01).onChange(() => {
+    convert(canvas, currentImage);
+  });
+  gui.add(config, "bevelSize", 0, 0.5, 0.01).onChange(() => {
+    convert(canvas, currentImage);
+  });
+  gui.add(config, "bevelSegments", 0, 10, 1).onChange(() => {
+    convert(canvas, currentImage);
+  });
+  gui.add(config, "smoothSide").onChange(() => {
+    convert(canvas, currentImage);
+  });
+  gui.add(config, "smoothBevel").onChange(() => {
+    convert(canvas, currentImage);
+  });
+
+  const folder = await debugMaterial(charManager.material);
+  await effectHDR(folder);
 }
