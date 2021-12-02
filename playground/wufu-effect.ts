@@ -396,6 +396,7 @@ async function init() {
           json.materialConfig.baseColor[0] /= 255;
           json.materialConfig.baseColor[1] /= 255;
           json.materialConfig.baseColor[2] /= 255;
+          json.materialConfig.baseColor[3] = 1;
           const string = JSON.stringify(JSON.stringify(json));
           console.log(string);
 
