@@ -66,6 +66,12 @@ const imageUrls = {
 };
 
 const config = {
+  brushConfig: {
+    brushImage: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*AdsLRaoSVM8AAAAAAAAAAAAAARQnAQ",
+    minSize: 10,
+    maxSize: 40,
+    velocityPressureCoff: 10
+  },
   extrudeConfig: {
     depth: 1,
     bevelSize: 0.1,
@@ -265,14 +271,8 @@ async function init() {
   };
 
   // debug
-  const brushConfig = {
-    brushImage: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*AdsLRaoSVM8AAAAAAAAAAAAAARQnAQ",
-    minSize: 10,
-    maxSize: 40,
-    velocityPressureCoff: 10
-  };
   gui
-    .add(brushConfig, "brushImage")
+    .add(config.brushConfig, "brushImage")
     .onChange((v) => {
       const image = new Image();
       image.onload = () => {
@@ -282,15 +282,15 @@ async function init() {
       image.crossOrigin = "anonymous";
     })
     .name("笔刷图片");
-  gui.add(brushConfig, "minSize", 0, 100, 1).onChange((v) => {
+  gui.add(config.brushConfig, "minSize", 0, 100, 1).onChange((v) => {
     canvasWriteManager.strokeEngine.minSize = v;
   });
 
-  gui.add(brushConfig, "maxSize", 0, 100, 1).onChange((v) => {
+  gui.add(config.brushConfig, "maxSize", 0, 100, 1).onChange((v) => {
     canvasWriteManager.strokeEngine.maxSize = v;
   });
   gui
-    .add(brushConfig, "velocityPressureCoff", 0, 100, 1)
+    .add(config.brushConfig, "velocityPressureCoff", 0, 100, 1)
     .onChange((v) => {
       canvasWriteManager.strokeEngine.velocityPressureCoff = v;
     })
