@@ -17,6 +17,7 @@ import {
   Texture2D,
   WebGLEngine
 } from "oasis-engine";
+import { CanvasWriteManager } from "./canvas-write/CanvasWriteManager";
 import { CharManager } from "./CharManager";
 import { image2path } from "./image2path";
 
@@ -97,6 +98,9 @@ canvas.setAttribute("style", "position:absolute;top:0;left:0;background:transpar
 document.body.appendChild(canvas);
 
 let currentImage;
+
+const canvasWriteManager = new CanvasWriteManager(engine, canvas, engine.canvas._webCanvas, rootEntity);
+canvasWriteManager.hide();
 
 // hdr
 async function effectHDR(folder) {
@@ -189,11 +193,14 @@ async function loadImages() {
   );
 }
 
-async function convert(canvas, image) {
-  const context = canvas.getContext("2d");
+async function convert(canvas, image?: HTMLImageElement) {
+  if (image) {
+    const context = canvas.getContext("2d");
 
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(image, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0);
+  }
+
   const data = await image2path(canvas, 0.01, "black");
 
   const result = extrudePolygon(data, config.extrudeConfig);
@@ -250,7 +257,86 @@ async function init() {
 
   convert(canvas, currentImage);
 
+  const image = new Image();
+  image.src = "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*AdsLRaoSVM8AAAAAAAAAAAAAARQnAQ";
+  image.crossOrigin = "anonymous";
+  image.onload = () => {
+    canvasWriteManager.selectBrush(image);
+  };
+
   // debug
+  const brushConfig = {
+    brushImage: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*AdsLRaoSVM8AAAAAAAAAAAAAARQnAQ",
+    minSize: 10,
+    maxSize: 40,
+    velocityPressureCoff: 10
+  };
+  gui
+    .add(brushConfig, "brushImage")
+    .onChange((v) => {
+      const image = new Image();
+      image.onload = () => {
+        canvasWriteManager.selectBrush(image);
+      };
+      image.src = v;
+      image.crossOrigin = "anonymous";
+    })
+    .name("笔刷图片");
+  gui.add(brushConfig, "minSize", 0, 100, 1).onChange((v) => {
+    canvasWriteManager.strokeEngine.minSize = v;
+  });
+
+  gui.add(brushConfig, "maxSize", 0, 100, 1).onChange((v) => {
+    canvasWriteManager.strokeEngine.maxSize = v;
+  });
+  gui
+    .add(brushConfig, "velocityPressureCoff", 0, 100, 1)
+    .onChange((v) => {
+      canvasWriteManager.strokeEngine.velocityPressureCoff = v;
+    })
+    .name("压速");
+
+  gui
+    .add(
+      {
+        start2D: () => {
+          orbitControl.enabled = false;
+          canvasWriteManager.clear();
+          canvasWriteManager.unlock();
+          canvasWriteManager.start();
+          canvasWriteManager.show();
+        }
+      },
+      "start2D"
+    )
+    .name("书写2D");
+
+  gui
+    .add(
+      {
+        clear: () => {
+          canvasWriteManager.clear();
+        }
+      },
+      "clear"
+    )
+    .name("重写");
+  gui
+    .add(
+      {
+        finish: async () => {
+          orbitControl.enabled = true;
+          canvasWriteManager.lock();
+          canvasWriteManager.hide();
+
+          await convert(canvas);
+          canvasWriteManager.clear();
+        }
+      },
+      "finish"
+    )
+    .name("结束书写");
+
   gui
     .add({ image: "1" }, "image", [1, 2, 3, 4, 5])
     .onChange(async (index) => {
