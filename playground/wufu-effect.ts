@@ -264,7 +264,7 @@ async function init() {
   convert(canvas, currentImage);
 
   const image = new Image();
-  image.src = "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*AdsLRaoSVM8AAAAAAAAAAAAAARQnAQ";
+  image.src = "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*3tgoSbuGc_MAAAAAAAAAAAAAARQnAQ";
   image.crossOrigin = "anonymous";
   image.onload = () => {
     canvasWriteManager.selectBrush(image);
@@ -305,6 +305,7 @@ async function init() {
           canvasWriteManager.unlock();
           canvasWriteManager.start();
           canvasWriteManager.show();
+          document.body.appendChild(canvas);
         }
       },
       "start2D"
@@ -320,7 +321,7 @@ async function init() {
       },
       "clear"
     )
-    .name("重写");
+    .name("清空");
   gui
     .add(
       {
@@ -328,9 +329,9 @@ async function init() {
           orbitControl.enabled = true;
           canvasWriteManager.lock();
           canvasWriteManager.hide();
-
+          currentImage = null;
           await convert(canvas);
-          canvasWriteManager.clear();
+          document.body.removeChild(canvas);
         }
       },
       "finish"
