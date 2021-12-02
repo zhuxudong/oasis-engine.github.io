@@ -93,7 +93,7 @@ const config = {
 
 const charManager = new CharManager(engine, rootEntity);
 charManager._charEntity.isActive = false;
-// charManager._charEntity.transform.setScale(0.01, 0.01, 0.01);
+charManager._charEntity.transform.setScale(0.01, 0.01, 0.01);
 charManager._charEntity.transform.setPosition(-4, 4, 0);
 
 const canvas = document.createElement("canvas");
@@ -207,9 +207,13 @@ async function convert(canvas, image?: HTMLImageElement) {
     context.drawImage(image, 0, 0);
   }
 
-  const data = await image2path(canvas, 0.01, "black");
+  const data = await image2path(canvas, 1, "black");
 
-  const result = extrudePolygon(data, config.extrudeConfig);
+  const result = extrudePolygon(data, {
+    ...config.extrudeConfig,
+    depth: config.extrudeConfig.depth / 0.01,
+    bevelSize: config.extrudeConfig.bevelSize / 0.01
+  });
   // 更新 mesh
   charManager.updateMesh(result);
   charManager._charEntity.isActive = true;
@@ -264,7 +268,7 @@ async function init() {
   convert(canvas, currentImage);
 
   const image = new Image();
-  image.src = "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*AdsLRaoSVM8AAAAAAAAAAAAAARQnAQ";
+  image.src = "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*3tgoSbuGc_MAAAAAAAAAAAAAARQnAQ";
   image.crossOrigin = "anonymous";
   image.onload = () => {
     canvasWriteManager.selectBrush(image);
@@ -305,6 +309,7 @@ async function init() {
           canvasWriteManager.unlock();
           canvasWriteManager.start();
           canvasWriteManager.show();
+          document.body.appendChild(canvas);
         }
       },
       "start2D"
@@ -320,7 +325,7 @@ async function init() {
       },
       "clear"
     )
-    .name("重写");
+    .name("清空");
   gui
     .add(
       {
@@ -328,9 +333,9 @@ async function init() {
           orbitControl.enabled = true;
           canvasWriteManager.lock();
           canvasWriteManager.hide();
-
+          currentImage = null;
           await convert(canvas);
-          canvasWriteManager.clear();
+          document.body.removeChild(canvas);
         }
       },
       "finish"
@@ -359,7 +364,7 @@ async function init() {
   gui.add(config.extrudeConfig, "depth", 0, 1, 0.01).onChange(() => {
     convert(canvas, currentImage);
   });
-  gui.add(config.extrudeConfig, "bevelSize", 0, 0.5, 0.01).onChange(() => {
+  gui.add(config.extrudeConfig, "bevelSize", 0, 1, 0.01).onChange(() => {
     convert(canvas, currentImage);
   });
   gui.add(config.extrudeConfig, "bevelSegments", 0, 10, 1).onChange(() => {
