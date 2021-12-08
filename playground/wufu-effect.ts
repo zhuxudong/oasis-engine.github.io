@@ -67,7 +67,7 @@ const imageUrls = {
 
 const config = {
   brushConfig: {
-    brushImage: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*AdsLRaoSVM8AAAAAAAAAAAAAARQnAQ",
+    brushImage: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*uzWjT7JeP00AAAAAAAAAAAAAARQnAQ",
     minSize: 10,
     maxSize: 40,
     velocityPressureCoff: 10
@@ -268,7 +268,7 @@ async function init() {
   convert(canvas, currentImage);
 
   const image = new Image();
-  image.src = "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*3tgoSbuGc_MAAAAAAAAAAAAAARQnAQ";
+  image.src = "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*uzWjT7JeP00AAAAAAAAAAAAAARQnAQ";
   image.crossOrigin = "anonymous";
   image.onload = () => {
     canvasWriteManager.selectBrush(image);
