@@ -77,7 +77,8 @@ const config = {
     bevelSize: 0.1,
     bevelSegments: 1,
     smoothSide: false,
-    smoothBevel: false
+    smoothBevel: false,
+    simplify: 1
   },
   materialConfig: {
     metallic: 1,
@@ -374,6 +375,9 @@ async function init() {
     convert(canvas, currentImage);
   });
   gui.add(config.extrudeConfig, "smoothBevel").onChange(() => {
+    convert(canvas, currentImage);
+  });
+  gui.add(config.extrudeConfig, "simplify", 0, 1, 0.01).onChange(() => {
     convert(canvas, currentImage);
   });
 
