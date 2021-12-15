@@ -74,10 +74,10 @@ const config = {
   },
   extrudeConfig: {
     depth: 1,
-    bevelSize: 0.1,
+    bevelSize: 0.03,
     bevelSegments: 1,
-    smoothSide: false,
-    smoothBevel: false,
+    smoothSide: true,
+    smoothBevel: true,
     simplify: 1
   },
   materialConfig: {
@@ -87,7 +87,7 @@ const config = {
     normalTexture: true
   },
   hdrConfig: {
-    url: "sunset",
+    url: "sky",
     intensity: 1
   }
 };
@@ -127,7 +127,7 @@ async function effectHDR(folder) {
     ambientLightList[name] = env;
   });
 
-  scene.ambientLight = ambientLightList.sunset;
+  scene.ambientLight = ambientLightList.sky;
   // skyMaterial.textureCubeMap = ambientLightList.sky.specularTexture;
   // skyMaterial.textureDecodeRGBM = true;
 
