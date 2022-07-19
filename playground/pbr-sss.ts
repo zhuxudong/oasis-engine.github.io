@@ -75,7 +75,7 @@ Promise.all([
       engine.resourceManager
         .load<Texture2D>({
           type: AssetType.Texture2D,
-          url: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*hBHDTqcLKrMAAAAAAAAAAAAAARQnAQ"
+          url: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*iAMbTblxLkcAAAAAAAAAAAAAARQnAQ"
           // url: "https://gw.alipayobjects.com/mdn/rms_7c464e/afts/img/A*hBHDTqcLKrMAAAAAAAAAAAAAARQnAQ"
         })
         .then((texture) => {
