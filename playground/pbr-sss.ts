@@ -227,7 +227,7 @@ Promise.all([
   engine.resourceManager
     .load<AmbientLight>({
       type: AssetType.Env,
-      url: "https://gw.alipayobjects.com/os/bmw-prod/46d53ed8-a52b-4b70-9e29-d5ecaeef7e35.bin"
+      url: "https://gw.alipayobjects.com/os/bmw-prod/62ea8222-22ec-4113-b487-fa9bed009c89.bin"
     })
     .then((ambientLight) => {
       scene.ambientLight = ambientLight;
