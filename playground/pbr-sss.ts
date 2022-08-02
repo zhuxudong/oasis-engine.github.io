@@ -6,7 +6,6 @@ import * as dat from "dat.gui";
 import {
   AmbientLight,
   AssetType,
-  BackgroundMode,
   BaseMaterial,
   Camera,
   Color,
@@ -23,7 +22,6 @@ import {
   Shader,
   SkyBoxMaterial,
   Texture2D,
-  TextureFilterMode,
   UnlitMaterial,
   Vector2,
   WebGLEngine,
@@ -34,7 +32,7 @@ const gui = new dat.GUI();
 Logger.enable();
 
 //-- create engine object
-const engine = new WebGLEngine("canvas", { webGLMode: WebGLMode.WebGL2 });
+const engine = new WebGLEngine("canvas", { webGLMode: WebGLMode.Auto });
 engine.canvas.resizeByClientSize();
 
 const scene = engine.sceneManager.activeScene;
@@ -101,6 +99,7 @@ void main(){
 
 uniform sampler2D u_texture;
 uniform sampler2D u_texture2;
+uniform sampler2D u_texture3;
 uniform vec2 u_texSize;
 uniform vec2 u_viewportSize;
 
@@ -145,6 +144,8 @@ vec3 ComputeBilateralWeight(float xy2, float z, float mmPerUnit, vec3 S, float r
   return EvalBurleyDiffusionProfile(r, S)*area;
 }
 
+
+
 void EvaluateSample(int i, int n, vec3 S, float d, vec3 centerPosVS, float mmPerUnit, float pixelsPerMm, float phase, inout vec3 totalIrradiance, inout vec3 totalWeight) {
   float scale = rcp(float(n));
   float offset = rcp(float(n))*0.5;
@@ -163,10 +164,10 @@ void EvaluateSample(int i, int n, vec3 S, float d, vec3 centerPosVS, float mmPer
   vec2 vec = r*vec2(cosPsi, sinPsi);
   vec2 position;
   float xy2;
-  position = v_uv + round((pixelsPerMm*r)*vec2(cosPsi, sinPsi)) * u_texSize;
+  position = v_uv + round((pixelsPerMm * r) * vec2(cosPsi, sinPsi)) * u_texSize;
   xy2 = r*r;
-  vec4 textureSample = texture(u_texture2, position);
-  float viewZ = textureSample.a;
+  vec4 textureSample = texture2D(u_texture2, position);
+  float viewZ = texture2D(u_texture3, position).r;
   vec3 irradiance = textureSample.rgb;
   
       float relZ = viewZ-centerPosVS.z;
@@ -179,23 +180,24 @@ void EvaluateSample(int i, int n, vec3 S, float d, vec3 centerPosVS, float mmPer
 void main(){
   vec4 color1 =  texture2D(u_texture, v_uv);
   vec4 color2 =  texture2D(u_texture2, v_uv);
+  vec4 color3 =  texture2D(u_texture3, v_uv);
 
-  if(color2.a == 1.0){
-      glFragColor = color1 + color2;
+  if(color3.a < 1.0){
+      gl_FragColor = color1 + color2;
       #ifndef OASIS_COLORSPACE_GAMMA
-    gl_FragColor = linearToGamma(gl_FragColor);
-  #endif
+        gl_FragColor = linearToGamma(gl_FragColor);
+      #endif
       return;
   }
 
   // --- start ---
-  vec3 S = vec3(1); // 透明为1
+  vec3 S = vec3(1.0, 1.0, 1.0); // 透明为1
   float d = 1.0; // 透明为1
 
   vec2 centerPosNDC = v_uv;
   vec2 cornerPosNDC = v_uv + 0.5 * u_texSize;
-  vec3 centerPosVS = vec3(centerPosNDC * u_viewportSize, 1.0) * color2.a;
-  vec3 cornerPosVS = vec3(cornerPosNDC * u_viewportSize, 1.0) * color2.a;
+  vec3 centerPosVS = vec3(centerPosNDC * u_viewportSize, 1.0) * color3.r;
+  vec3 cornerPosVS = vec3(cornerPosNDC * u_viewportSize, 1.0) * color3.r;
   float mmPerUnit = 400.0;
   float unitsPerMm = rcp(mmPerUnit);
   float unitsPerPixel = 2. * abs(cornerPosVS.x-centerPosVS.x);
@@ -216,7 +218,7 @@ void main(){
   // ---end ---
 
   gl_FragColor = color1 + vec4(totalIrradiance / totalWeight ,1.0);
-  // gl_FragColor = vec4(color2.a);
+  // gl_FragColor = vec4(color3.r);
 
   #ifndef OASIS_COLORSPACE_GAMMA
     gl_FragColor = linearToGamma(gl_FragColor);
@@ -232,10 +234,15 @@ class SSSScript extends Script {
 
   constructor(entity: Entity) {
     super(entity);
-    const { width, height } = this.engine.canvas;
+    let { width, height } = this.engine.canvas;
     const renderColorTexture = new Texture2D(this.engine, width, height);
     const renderColorTexture2 = new Texture2D(this.engine, width, height);
-    const renderTarget = new RenderTarget(this.engine, width, height, [renderColorTexture, renderColorTexture2]);
+    const renderColorTexture3 = new Texture2D(this.engine, width, height);
+    const renderTarget = new RenderTarget(this.engine, width, height, [
+      renderColorTexture,
+      renderColorTexture2,
+      renderColorTexture3
+    ]);
 
     const newScene = new Scene(engine);
     const screenEntity = newScene.createRootEntity("screen");
@@ -246,6 +253,7 @@ class SSSScript extends Script {
     screenRenderer.setMaterial(material);
     material.shaderData.setTexture("u_texture", renderColorTexture);
     material.shaderData.setTexture("u_texture2", renderColorTexture2);
+    material.shaderData.setTexture("u_texture3", renderColorTexture3);
     material.shaderData.setVector2("u_texSize", new Vector2(1 / width, 1 / height));
     material.shaderData.setVector2(
       "u_viewportSize",
