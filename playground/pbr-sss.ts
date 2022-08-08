@@ -9,12 +9,12 @@ import {
   BaseMaterial,
   Camera,
   Color,
+  DirectLight,
   Entity,
   GLTFResource,
   Logger,
   MeshRenderer,
   PBRMaterial,
-  PointLight,
   PrimitiveMesh,
   RenderTarget,
   Scene,
@@ -22,7 +22,6 @@ import {
   Shader,
   SkyBoxMaterial,
   Texture2D,
-  UnlitMaterial,
   Vector2,
   WebGLEngine,
   WebGLMode
@@ -42,7 +41,7 @@ const rootEntity = scene.createRootEntity();
 
 //Create camera
 const cameraNode = rootEntity.createChild("camera_node");
-cameraNode.transform.setPosition(0, 1.5, -1);
+cameraNode.transform.setPosition(0, 1.5, 1);
 const camera = cameraNode.addComponent(Camera);
 cameraNode.addComponent(OrbitControl).target.set(0, 1.5, 0);
 camera.farClipPlane = 1000;
@@ -209,8 +208,8 @@ void main(){
   vec3 totalIrradiance = vec3(0.);
   vec3 totalWeight = vec3(0.);
 
-  for (int i = 0;i< 40;i++) {
-      EvaluateSample(i, 40, S, d, centerPosVS, mmPerUnit, pixelsPerMm, phase, totalIrradiance, totalWeight);
+  for (int i = 0;i< 10;i++) {
+      EvaluateSample(i, 10, S, d, centerPosVS, mmPerUnit, pixelsPerMm, phase, totalIrradiance, totalWeight);
   }
 
   totalWeight = max(totalWeight, HALF_MIN);
@@ -288,7 +287,15 @@ Promise.all([
       const { defaultSceneRoot, materials } = gltf;
       rootEntity.addChild(defaultSceneRoot);
       const faceMaterial = materials[3] as PBRMaterial;
-      defaultSceneRoot.transform.rotate(0, 180, 0);
+
+      engine.resourceManager
+        .load({
+          type: AssetType.Texture2D,
+          url: "https://gw.alipayobjects.com/zos/OasisHub/676000146/3281/H_Color2.jpg"
+        })
+        .then((texture) => {
+          faceMaterial.baseTexture = texture;
+        });
 
       // SSS
       engine.resourceManager
@@ -300,8 +307,10 @@ Promise.all([
         .then((texture) => {
           faceMaterial.thicknessTexture = texture;
           faceMaterial.subsurface = 1;
-          faceMaterial.baseColor.set(198 / 255, 160 / 255, 122 / 255, 1);
-          faceMaterial.subsurfaceColor.set(214 / 255, 109 / 255, 82 / 255, 1);
+          // faceMaterial.baseColor.set(227 / 255, 170 / 255, 141 / 255, 1);
+          faceMaterial.baseColor.set(1, 1, 1, 1);
+
+          faceMaterial.subsurfaceColor.set(1, 58 / 255, 0, 1);
 
           const color = colorToGui(faceMaterial.baseColor);
           const subcolor = colorToGui(faceMaterial.subsurfaceColor);
@@ -384,69 +393,9 @@ Promise.all([
     }),
   // 灯光
   engine.resourceManager
-    .load<GLTFResource>({
-      type: AssetType.Prefab,
-      url: "https://gw.alipayobjects.com/os/bmw-prod/963e8950-d5ec-4da8-9a8b-f75e322f483d.glb"
-    })
-    .then((gltf) => {
-      const { lights, defaultSceneRoot } = gltf;
-      const pointLight1 = lights[0] as PointLight;
-      const pointLight2 = lights[1] as PointLight;
-      const pointLight3 = lights[2] as PointLight;
-      defaultSceneRoot.transform.rotate(0, 180, 0);
-      pointLight1.intensity = 1;
-      pointLight2.intensity = 0.3;
-      pointLight3.intensity = 0.3;
-      console.log(lights, gltf);
-      rootEntity.addChild(defaultSceneRoot);
-      const renderer1 = pointLight1.entity.addComponent(MeshRenderer);
-      const renderer2 = pointLight2.entity.addComponent(MeshRenderer);
-      const renderer3 = pointLight3.entity.addComponent(MeshRenderer);
-      const material = new UnlitMaterial(engine);
-      renderer1.mesh = renderer2.mesh = renderer3.mesh = PrimitiveMesh.createSphere(engine, 0.3, 32);
-      renderer1.setMaterial(material);
-      renderer2.setMaterial(material);
-      renderer3.setMaterial(material);
-
-      const debugInfo = {
-        color1: colorToGui(pointLight1.color),
-        color2: colorToGui(pointLight2.color),
-        color3: colorToGui(pointLight3.color)
-      };
-      const folder1 = gui.addFolder("light1");
-      folder1.add(pointLight1, "enabled");
-      folder1.add(pointLight1, "intensity", 0, 1, 0.01);
-      folder1
-        .addColor(debugInfo, "color1")
-        .onChange((v) => {
-          guiToColor(v, pointLight1.color);
-        })
-        .name("color");
-
-      const folder2 = gui.addFolder("light2");
-      folder2.add(pointLight2, "enabled");
-      folder2.add(pointLight2, "intensity", 0, 1, 0.01);
-      folder2
-        .addColor(debugInfo, "color2")
-        .onChange((v) => {
-          guiToColor(v, pointLight2.color);
-        })
-        .name("color");
-
-      const folder3 = gui.addFolder("light3");
-      folder3.add(pointLight3, "enabled");
-      folder3.add(pointLight3, "intensity", 0, 1, 0.01);
-      folder3
-        .addColor(debugInfo, "color1")
-        .onChange((v) => {
-          guiToColor(v, pointLight3.color);
-        })
-        .name("color");
-    }),
-  engine.resourceManager
     .load<AmbientLight>({
       type: AssetType.Env,
-      url: "https://gw.alipayobjects.com/os/bmw-prod/62ea8222-22ec-4113-b487-fa9bed009c89.bin"
+      url: "https://gw.alipayobjects.com/os/bmw-prod/67b05052-ecf8-46f1-86ff-26d9abcc83ea.bin"
     })
     .then((ambientLight) => {
       scene.ambientLight = ambientLight;
@@ -463,3 +412,15 @@ Promise.all([
 ]).then(() => {
   engine.run();
 });
+
+// 直接光
+const mainLightEntity = rootEntity.createChild("mainLight");
+const mainLight = mainLightEntity.addComponent(DirectLight);
+const purpleLightEntity = rootEntity.createChild("purpleLight");
+const purpleLight = purpleLightEntity.addComponent(DirectLight);
+
+mainLightEntity.transform.setRotation(-22, 0, 0);
+purpleLightEntity.transform.setRotation(0, 210, 0);
+mainLight.intensity = 0.55;
+purpleLight.intensity = 0.15;
+purpleLight.color.set(189 / 255, 16 / 255, 224 / 255, 1);
