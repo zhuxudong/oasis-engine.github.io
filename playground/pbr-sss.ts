@@ -6,23 +6,18 @@ import * as dat from "dat.gui";
 import {
   AmbientLight,
   AssetType,
-  BaseMaterial,
   Camera,
   Color,
   DirectLight,
-  Entity,
   GLTFResource,
   Logger,
+  Material,
   MeshRenderer,
   PBRMaterial,
   PrimitiveMesh,
-  RenderTarget,
-  Scene,
-  Script,
-  Shader,
   SkyBoxMaterial,
   Texture2D,
-  Vector2,
+  UnlitMaterial,
   WebGLEngine,
   WebGLMode
 } from "oasis-engine";
@@ -79,6 +74,16 @@ Promise.all([
       const { defaultSceneRoot, materials } = gltf;
       rootEntity.addChild(defaultSceneRoot);
       const faceMaterial = materials[3] as PBRMaterial;
+
+      // const renderers = [];
+      // defaultSceneRoot.getComponentsIncludeChildren(MeshRenderer, renderers);
+      // renderers.forEach((renderer) => {
+      //   const material: PBRMaterial = renderer.getMaterial();
+      //   const texture = material.baseTexture;
+      //   const newMaterial = new UnlitMaterial(engine);
+      //   newMaterial.baseTexture = texture;
+      //   renderer.setMaterial(newMaterial);
+      // });
 
       // SSS
       engine.resourceManager
@@ -188,7 +193,7 @@ Promise.all([
 
       const folder = gui.addFolder("HDR");
       folder.open();
-      folder.add({ intensity: ambientLight.specularIntensity }, "intensity", 0, 5, 0.01).onChange((v) => {
+      folder.add({ intensity: ambientLight.specularIntensity }, "intensity", 0, 1, 0.01).onChange((v) => {
         ambientLight.specularIntensity = ambientLight.diffuseIntensity = v;
       });
     })
@@ -207,3 +212,13 @@ purpleLightEntity.transform.setRotation(0, 210, 0);
 mainLight.intensity = 0.55;
 purpleLight.intensity = 0.15;
 purpleLight.color.set(189 / 255, 16 / 255, 224 / 255, 1);
+
+gui.add({ light: true }, "light").onChange((open) => {
+  if (open) {
+    mainLight.intensity = 0.55;
+    purpleLight.intensity = 0.15;
+  } else {
+    mainLight.intensity = 0;
+    purpleLight.intensity = 0;
+  }
+});
