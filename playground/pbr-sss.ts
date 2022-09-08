@@ -14,6 +14,7 @@ import {
   Material,
   MeshRenderer,
   PBRMaterial,
+  PointLight,
   PrimitiveMesh,
   SkyBoxMaterial,
   Texture2D,
@@ -66,14 +67,15 @@ Promise.all([
   engine.resourceManager
     .load<GLTFResource>({
       type: AssetType.Prefab,
-      url: "https://gw.alipayobjects.com/os/bmw-prod/2f1b04ef-8679-4328-a750-508267664efb.gltf"
+      // url: "https://gw.alipayobjects.com/os/bmw-prod/2f1b04ef-8679-4328-a750-508267664efb.gltf"
+      url: "https://gw.alipayobjects.com/os/OasisHub/694000414/8777/YouthMaleNormal_Clothes_Default.gltf"
     })
     .then((gltf) => {
       console.log(gltf);
 
       const { defaultSceneRoot, materials } = gltf;
       rootEntity.addChild(defaultSceneRoot);
-      const faceMaterial = materials[3] as PBRMaterial;
+      const faceMaterial = materials[6] as PBRMaterial;
 
       // const renderers = [];
       // defaultSceneRoot.getComponentsIncludeChildren(MeshRenderer, renderers);
@@ -183,7 +185,7 @@ Promise.all([
   engine.resourceManager
     .load<AmbientLight>({
       type: AssetType.Env,
-      url: "https://gw.alipayobjects.com/os/bmw-prod/67b05052-ecf8-46f1-86ff-26d9abcc83ea.bin"
+      url: "https://gw.alipayobjects.com/os/bmw-prod/e1576160-17ec-49b3-ab58-270db1810aba.bin"
     })
     .then((ambientLight) => {
       scene.ambientLight = ambientLight;
@@ -200,25 +202,31 @@ Promise.all([
 ]).then(() => {
   engine.run();
 });
-
 // 直接光
 const mainLightEntity = rootEntity.createChild("mainLight");
 const mainLight = mainLightEntity.addComponent(DirectLight);
 const purpleLightEntity = rootEntity.createChild("purpleLight");
 const purpleLight = purpleLightEntity.addComponent(DirectLight);
+const subLightEntity = rootEntity.createChild("subLight");
+const subLight = subLightEntity.addComponent(PointLight);
 
-mainLightEntity.transform.setRotation(-22, 0, 0);
+mainLightEntity.transform.setRotation(-8, 0, 0);
 purpleLightEntity.transform.setRotation(0, 210, 0);
+subLightEntity.transform.setPosition(-0.032, 1.911, 0.136);
 mainLight.intensity = 0.55;
 purpleLight.intensity = 0.15;
 purpleLight.color.set(189 / 255, 16 / 255, 224 / 255, 1);
+subLight.intensity = 0.4;
+subLight.distance = 4;
 
 gui.add({ light: true }, "light").onChange((open) => {
   if (open) {
     mainLight.intensity = 0.55;
     purpleLight.intensity = 0.15;
+    subLight.intensity = 0.4;
   } else {
     mainLight.intensity = 0;
     purpleLight.intensity = 0;
+    subLight.intensity = 0;
   }
 });
