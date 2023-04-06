@@ -2,7 +2,7 @@
  * @title IBL Baker
  * @category Material
  */
-import { DecodeMode, IBLBaker, SphericalHarmonics3Baker } from "@oasis-engine/baker";
+import { BakerResolution, IBLBaker, SphericalHarmonics3Baker } from "@oasis-engine-tools/baker";
 import { OrbitControl } from "@oasis-engine-toolkit/controls";
 import * as dat from "dat.gui";
 import {
@@ -22,7 +22,9 @@ import {
   TextureCubeFace,
   TextureCube,
   Vector3,
-  WebGLEngine
+  WebGLEngine,
+  SkyBoxMaterial,
+  BackgroundMode
 } from "oasis-engine";
 Logger.enable();
 
@@ -35,10 +37,16 @@ const scene = engine.sceneManager.activeScene;
 const { ambientLight } = scene;
 const rootEntity = scene.createRootEntity();
 
-//Create camera
+const sky = scene.background.sky;
+const skyMaterial = new SkyBoxMaterial(engine);
+scene.background.mode = BackgroundMode.Sky;
+sky.material = skyMaterial;
+sky.mesh = PrimitiveMesh.createCuboid(engine, 1, 1, 1);
+
+// Create camera
 const cameraNode = rootEntity.createChild("camera_node");
 cameraNode.transform.position = new Vector3(0, 0, 10);
-cameraNode.addComponent(Camera);
+const camera = cameraNode.addComponent(Camera);
 cameraNode.addComponent(OrbitControl);
 Promise.all([
   engine.resourceManager.load<TextureCube>({
@@ -54,30 +62,22 @@ Promise.all([
   }),
   engine.resourceManager.load<TextureCube>({
     url: "https://gw.alipayobjects.com/os/bmw-prod/10c5d68d-8580-4bd9-8795-6f1035782b94.bin", // sunset_1K
-    // url: "https://gw.alipayobjects.com/os/bmw-prod/20d58ffa-c7da-4c54-8980-4efaf91a0239.bin",// pisa_1K
-    // url: "https://gw.alipayobjects.com/os/bmw-prod/59b28d9f-7589-4d47-86b0-52c50b973b10.bin", // footPrint_2K
-    type: "HDR-RGBE"
+    type: AssetType.HDR
   })
 ]).then((textures: TextureCube[]) => {
   const ldrCubeMap = textures[0];
   const hdrCubeMap = textures[1];
-  const bakedLDRCubeMap = IBLBaker.fromTextureCubeMap(ldrCubeMap, DecodeMode.Gamma);
-  const bakedHDRCubeMap = IBLBaker.fromTextureCubeMap(hdrCubeMap, DecodeMode.RGBE);
-
-  ambientLight.specularTexture = bakedHDRCubeMap;
-  ambientLight.specularTextureDecodeRGBM = true;
-
-  const sh = new SphericalHarmonics3();
-  SphericalHarmonics3Baker.fromTextureCubeMap(hdrCubeMap, DecodeMode.RGBE, sh);
-  ambientLight.diffuseMode = DiffuseMode.SphericalHarmonics;
-  ambientLight.diffuseSphericalHarmonics = sh;
+  skyMaterial.textureCubeMap = hdrCubeMap;
 
   engine.run();
 
-  debugIBL(bakedLDRCubeMap, bakedHDRCubeMap);
+  gui.add(skyMaterial, "rotation", 0, 360, 1);
+  gui.add(skyMaterial, "exposure", 0, 10, 0.1);
+
+  debugIBL(ldrCubeMap, hdrCubeMap);
 });
 
-function debugIBL(bakedLDRCubeMap: TextureCube, bakedHDRCubeMap: TextureCube) {
+function debugIBL(ldrCubeMap: TextureCube, hdrCubeMap: TextureCube) {
   Shader.create(
     "ibl debug test",
     `
@@ -119,8 +119,8 @@ function debugIBL(bakedLDRCubeMap: TextureCube, bakedHDRCubeMap: TextureCube) {
       `
   );
 
-  let debugTexture = bakedHDRCubeMap;
-  const size = debugTexture.width;
+  let debugTexture: TextureCube;
+  const size = hdrCubeMap.width;
 
   // Create Sphere
   const sphereEntity = rootEntity.createChild("box");
@@ -137,7 +137,9 @@ function debugIBL(bakedLDRCubeMap: TextureCube, bakedHDRCubeMap: TextureCube) {
   const planeMaterials = new Array<Material>(6);
 
   for (let i = 0; i < 6; i++) {
-    const bakerEntity = rootEntity.createChild("IBL Baker Entity");
+    const test = scene.createRootEntity(i+"");
+    // const bakerEntity = rootEntity.createChild("IBL Baker Entity");
+    const bakerEntity = test;
     bakerEntity.transform.setRotation(90, 0, 0);
     const bakerMaterial = new Material(engine, Shader.find("ibl debug test"));
     bakerMaterial.renderState.rasterState.cullMode = CullMode.Off;
@@ -172,25 +174,39 @@ function debugIBL(bakedLDRCubeMap: TextureCube, bakedHDRCubeMap: TextureCube) {
     }
   }
 
-  changeMip(0);
-
   const state = {
     mipLevel: 0,
-    HDR: true
+    HDR: true,
+    bake: () => {
+      const bakedTexture = IBLBaker.fromScene(scene, BakerResolution.R256);
+      ambientLight.specularTexture = bakedTexture;
+
+      const sh = new SphericalHarmonics3();
+      SphericalHarmonics3Baker.fromTextureCubeMap(bakedTexture, sh);
+      ambientLight.diffuseMode = DiffuseMode.SphericalHarmonics;
+      ambientLight.diffuseSphericalHarmonics = sh;
+
+      debugTexture = bakedTexture;
+      changeMip(state.mipLevel);
+    }
   };
 
-  gui.add(state, "mipLevel", 0, debugTexture.mipmapCount - 1, 1).onChange((mipLevel: number) => {
+  gui.add(state, "mipLevel", 0, hdrCubeMap.mipmapCount - 1, 1).onChange((mipLevel: number) => {
     changeMip(mipLevel);
   });
 
   gui.add(state, "HDR").onChange((v) => {
     if (v) {
-      debugTexture = bakedHDRCubeMap;
+      skyMaterial.textureCubeMap = hdrCubeMap;
+      skyMaterial.textureDecodeRGBM = true;
     } else {
-      debugTexture = bakedLDRCubeMap;
+      skyMaterial.textureCubeMap = ldrCubeMap;
+      skyMaterial.textureDecodeRGBM = false;
     }
-
-    ambientLight.specularTexture = debugTexture;
-    changeMip(state.mipLevel);
   });
+
+  gui.add(state, "bake").name("点我烘焙");
+
+  // bake first
+  state.bake();
 }

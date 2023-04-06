@@ -165,7 +165,6 @@ class Oasis {
 
           this.scene.ambientLight = env;
           this.skyMaterial.textureCubeMap = env.specularTexture;
-          this.skyMaterial.textureDecodeRGBM = true;
           resolve(true);
         });
     });

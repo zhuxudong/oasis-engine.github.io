@@ -43,6 +43,9 @@ label: Editor-Feature/Rendering-3d
 2.**上传模型。** 可以选择以下两种方式上传：
 
 - 直接把模型文件或者 **.zip** 拖进编辑器的资源面板即可完成上传（**推荐**）；
+> zip 打包的时候，要选中所有资源，右击选择压缩 x 个项目”，不要选择外层文件夹打包。
+
+![gltf](https://gw.alipayobjects.com/zos/OasisHub/28f36b3d-8463-4da3-b458-047a4155d3b3/gltf.gif)
 
 - 在编辑器下方的资源面板中选择上传 **模型**。
 

@@ -58,7 +58,6 @@ Promise.all([
     .then((ambientLight) => {
       scene.ambientLight = ambientLight;
       skyMaterial.textureCubeMap = ambientLight.specularTexture;
-      skyMaterial.textureDecodeRGBM = true;
     })
 ]).then(() => {
   engine.run();

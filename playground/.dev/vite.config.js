@@ -69,7 +69,7 @@ module.exports = {
       "@oasis-engine/draco",
       "@oasis-engine/lottie",
       "@oasis-engine/spine",
-      "@oasis-engine/baker",
+      "@oasis-engine-tools/baker",
       "oasis-engine-toolkit",
       "@oasis-engine-toolkit/auxiliary-lines",
       "@oasis-engine-toolkit/controls",

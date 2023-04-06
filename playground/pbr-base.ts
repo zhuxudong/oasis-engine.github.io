@@ -65,7 +65,6 @@ Promise.all([
     .then((ambientLight) => {
       scene.ambientLight = ambientLight;
       skyMaterial.textureCubeMap = ambientLight.specularTexture;
-      skyMaterial.textureDecodeRGBM = true;
 
       const envFolder = gui.addFolder("EnvironmentMapLight");
       envFolder.add(ambientLight, "specularIntensity", 0, 1);

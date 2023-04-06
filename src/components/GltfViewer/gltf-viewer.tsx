@@ -2,7 +2,14 @@
 /* eslint no-multi-assign: "off" */
 /* eslint no-param-reassign: ["error", { "props": false }] */
 /* eslint no-underscore-dangle: 0 */
-import { DecodeMode, downloadArrayBuffer, IBLBaker, SphericalHarmonics3Baker, toBuffer } from "@oasis-engine/baker";
+import {
+  BakerResolution,
+  DecodeMode,
+  downloadArrayBuffer,
+  IBLBaker,
+  SphericalHarmonics3Baker,
+  toBuffer
+} from "@oasis-engine-tools/baker";
 import { OrbitControl } from "@oasis-engine-toolkit/controls";
 import {
   AmbientLight,
@@ -33,8 +40,8 @@ import {
   WebGLEngine
 } from "oasis-engine";
 import React, { useEffect } from "react";
-import * as dat from 'dat.gui';
-import { SimpleDropzone } from 'simple-dropzone';
+import * as dat from "dat.gui";
+import { SimpleDropzone } from "simple-dropzone";
 import "./gltf-viewer.less";
 
 const envList = {
@@ -132,7 +139,6 @@ class Oasis {
 
           this.scene.ambientLight = env;
           this.skyMaterial.textureCubeMap = env.specularTexture;
-          this.skyMaterial.textureDecodeRGBM = true;
           resolve(true);
         });
     });
@@ -386,12 +392,12 @@ class Oasis {
   async addEnv(name: string, url: string) {
     const texture = await this.engine.resourceManager.load<TextureCube>({
       url,
-      type: "HDR-RGBE" // from baker
+      type: AssetType.HDR
     });
 
-    const bakedHDRCubeMap = IBLBaker.fromTextureCubeMap(texture, DecodeMode.RGBE);
+    const bakedHDRCubeMap = IBLBaker.fromTextureCubeMap(texture, BakerResolution.R128, DecodeMode.RGBM);
     const sh = new SphericalHarmonics3();
-    SphericalHarmonics3Baker.fromTextureCubeMap(texture, DecodeMode.RGBE, sh);
+    SphericalHarmonics3Baker.fromTextureCubeMap(bakedHDRCubeMap, sh);
     const arrayBuffer = toBuffer(bakedHDRCubeMap, sh);
     downloadArrayBuffer(arrayBuffer, name);
 

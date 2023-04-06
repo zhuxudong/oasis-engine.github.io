@@ -62,7 +62,6 @@ engine.resourceManager
   .then((ambientLight) => {
     scene.ambientLight = ambientLight;
     skyMaterial.textureCubeMap = ambientLight.specularTexture;
-    skyMaterial.textureDecodeRGBM = true;
     openDebug(ambientLight.specularTexture);
     engine.run();
   });
