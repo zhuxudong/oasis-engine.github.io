@@ -5,55 +5,174 @@
 import {
   AmbientLight,
   AssetType,
+  BackgroundMode,
+  BlinnPhongMaterial,
+  BloomDownScaleMode,
+  BloomEffect,
   Camera,
+  ColorSpace,
+  DirectLight,
   GLTFResource,
   Layer,
+  Logger,
   Material,
   MeshRenderer,
+  PBRMaterial,
+  PostProcessPass,
   PrimitiveMesh,
   RenderTarget,
   Script,
   Shader,
+  SkyBoxMaterial,
   Texture2D,
+  TonemappingEffect,
+  TonemappingMode,
   Vector2,
-  WebGLEngine
+  WebGLEngine,
+  WebGLMode
 } from "@galacean/engine";
-import { OrbitControl } from "@galacean/engine-toolkit";
+import { ShaderLab } from "@galacean/engine-shader-lab";
+import { OrbitControl, Stats } from "@galacean/engine-toolkit";
 import * as dat from "dat.gui";
-
+Logger.enable();
 const gui = new dat.GUI();
 
-WebGLEngine.create({ canvas: "canvas" }).then((engine) => {
+const shaderLab = new ShaderLab();
+
+WebGLEngine.create({
+  canvas: "canvas",
+  shaderLab,
+  colorSpace: ColorSpace.Linear,
+  graphicDeviceOptions: {
+    webGLMode: WebGLMode.WebGL2
+  }
+}).then((engine) => {
+  window.onresize = () => {
+    engine.canvas.resizeByClientSize();
+  };
   engine.canvas.resizeByClientSize();
   const scene = engine.sceneManager.activeScene;
   const rootEntity = scene.createRootEntity();
 
   const cameraEntity = rootEntity.createChild("camera");
   const camera = cameraEntity.addComponent(Camera);
-  const bloom = cameraEntity.addComponent(BloomScript);
-  cameraEntity.transform.setPosition(0, 0, 5);
-  cameraEntity.addComponent(OrbitControl);
+  cameraEntity.addComponent(Stats);
+  // const bloom = cameraEntity.addComponent(BloomScript);
+  cameraEntity.transform.setPosition(0, 0, 10);
+  const control = cameraEntity.addComponent(OrbitControl);
+  control.enableDamping = false;
+
+  const lightEntity = rootEntity.createChild();
+  const light = lightEntity.addComponent(DirectLight);
+  lightEntity.transform.setRotation(-50, -30, 0);
 
   engine.resourceManager
     .load<GLTFResource>("https://gw.alipayobjects.com/os/bmw-prod/a1da72a4-023e-4bb1-9629-0f4b0f6b6fc4.glb")
     .then((gltf) => {
       const defaultSceneRoot = gltf.instantiateSceneRoot();
       rootEntity.addChild(defaultSceneRoot);
+
+      // const entity = rootEntity.createChild();
+      // const mesh = PrimitiveMesh.createSphere(engine, 2, 64);
+      // const material = new PBRMaterial(engine);
+      // const renderer = entity.addComponent(MeshRenderer);
+      // renderer.mesh = mesh;
+      // renderer.setMaterial(material);
+      // material.roughness = 0;
     });
 
   engine.resourceManager
     .load<AmbientLight>({
       type: AssetType.Env,
-      url: "https://gw.alipayobjects.com/os/bmw-prod/f369110c-0e33-47eb-8296-756e9c80f254.bin"
+      url: "https://mdn.alipayobjects.com/oasis_be/afts/file/A*i93mQb39ON4AAAAAAAAAAAAADkp5AQ/ambient.bin"
     })
-    .then((ambientLight) => {
+    .then(async (ambientLight) => {
       scene.ambientLight = ambientLight;
+      // Create sky
+      const sky = scene.background.sky;
+      const skyMaterial = new SkyBoxMaterial(engine);
+      // scene.background.mode = BackgroundMode.Sky;
+      scene.background.solidColor.set(0, 0, 0, 0);
+
+      sky.material = skyMaterial;
+      sky.mesh = PrimitiveMesh.createCuboid(engine, 1, 1, 1);
+      skyMaterial.texture = ambientLight.specularTexture;
+      skyMaterial.textureDecodeRGBM = true;
+
+      // test post process
+      camera.enablePostProcess = true;
+      camera.enableHDR = true;
+      // camera.msaaSamples = 4;
+
+      const postPass = new PostProcessPass(engine);
+      const bloomEffect = new BloomEffect(engine);
+      const tonemappingEffect = new TonemappingEffect(engine);
+      scene.postProcessManager.addPass(postPass);
+      postPass.addEffect(bloomEffect);
+      // postPass.addEffect(tonemappingEffect);
+
+      // const renderTarget = new RenderTarget(engine, 1024, 1024, new Texture2D(engine, 1024, 1024, undefined));
+      // camera.renderTarget = renderTarget;
+      // console.log(camera.independentCanvasEnabled);
+
+      const debugInfo = {
+        tint: [255, 255, 255],
+        downScale: "Half",
+        mode: "Neutral"
+      };
+
+      const cameraFolder = gui.addFolder("camera");
+      cameraFolder.open();
+      cameraFolder.add(camera, "enablePostProcess");
+      cameraFolder.add(camera, "enableHDR");
+      cameraFolder.add(camera, "msaaSamples", 0, 8);
+      const bloomFolder = gui.addFolder("Bloom");
+      bloomFolder.open();
+      bloomFolder.add(bloomEffect, "highQualityFiltering");
+      bloomFolder.add(bloomEffect, "threshold", 0, 1, 0.01);
+      bloomFolder.add(bloomEffect, "scatter", 0, 1, 0.01);
+      bloomFolder.add(bloomEffect, "intensity", 0, 1, 0.01);
+      bloomFolder.add(bloomEffect, "dirtIntensity", 0, 1, 0.01);
+      bloomFolder.add(debugInfo, "downScale", ["Half", "Quarter"]).onChange((v) => {
+        bloomEffect.downScale = v === "Half" ? BloomDownScaleMode.Half : BloomDownScaleMode.Quarter;
+      });
+
+      bloomFolder.addColor(debugInfo, "tint").onChange((v) => {
+        bloomEffect.tint.copyFromArray(v).scale(1 / 255);
+        bloomEffect.tint.a = 1;
+      });
+
+      const dirtTexture = await engine.resourceManager.load<Texture2D>({
+        type: AssetType.Texture2D,
+        url: "https://mdn.alipayobjects.com/huamei_dmxymu/afts/img/A*tMeTQ4Mx60oAAAAAAAAAAAAADuuHAQ/original"
+      });
+      bloomEffect.dirtTexture = dirtTexture;
+
+      const toneFolder = gui.addFolder("Tonemapping");
+      toneFolder.open();
+      toneFolder.add(debugInfo, "mode", ["None", "Neutral", "ACES"]).onChange((v) => {
+        switch (v) {
+          case "None":
+            tonemappingEffect.mode = TonemappingMode.None;
+            break;
+          case "Neutral":
+            tonemappingEffect.mode = TonemappingMode.Neutral;
+            break;
+          case "ACES":
+            tonemappingEffect.mode = TonemappingMode.ACES;
+            break;
+        }
+      });
+
+      setInterval(() => {
+        // camera.enablePostProcess = !camera.enablePostProcess;
+      }, 1000);
     }),
     engine.run();
 
-  gui.add(bloom, "threshold", 0, 1, 0.01);
-  gui.add(bloom, "exposure", 0, 2, 0.01);
-  gui.add(bloom, "bloomWeight", 0, 2, 0.01);
+  // gui.add(bloom, "threshold", 0, 1, 0.01);
+  // gui.add(bloom, "exposure", 0, 2, 0.01);
+  // gui.add(bloom, "bloomWeight", 0, 2, 0.01);
 });
 
 const vertex = `
